@@ -4,9 +4,11 @@ This is a minimalistic SEVCON Gen4 configuration shell for Arduino.
 
 It's a port of my SEVCON core functionality from the [OVMS project](https://github.com/openvehicles/Open-Vehicle-Monitoring-System), with a simple command interface on the Arduino serial port.
 
-It currently only supports reading & writing SDO registers and entering/leaving pre-operational mode. Support for the OVMS/Twizy tuning macro commands (i.e. `power`, `speed`, `recup` etc.) has not yet been ported.
+**V1** supported only reading & writing SDO registers and entering/leaving pre-operational mode. This is now supported both by the V1 shortcut commands as well as the original OVMS command syntax.
 
-So currently you need to know the registers and value scalings for your tuning needs. Read the SEVCON Gen4 manual for some basic description of registers. The full register set is documented in the SEVCON master dictionary, which is ©SEVCON. It's contained in the SEVCON DVT package.
+**V2** now also supports the OVMS/Twizy tuning macro commands (i.e. `power`, `speed`, `recup` etc.) as well as profile management including saving to / loading from the Arduino EEPROM. Assuming this will be used by hardware hackers, the `brakelight` command has been included as well. Still missing from the OVMS command set is the `clear` command, this is planned to get included along with log access and output. Also missing are all dynamic adjustment functions, i.e. auto drive/recuperation power level following and kickdown.
+
+Read the OVMS user manual and command overview for details on all commands. You may also like to read the SEVCON Gen4 manual for some basic description of registers. The full register set is documented in the SEVCON master dictionary, which is ©SEVCON. It's contained in the SEVCON DVT package.
 
 Most registers of interest for normal tuning can be found in the [Twizy SDO list](extras/Twizy-SDO-List.ods).
 
@@ -36,6 +38,9 @@ Connect to the OBD2 port, switch on the Twizy, start the sketch & open the seria
 
 The Arduino will display a help screen, then wait for your commands:
 
+
+### Low level commands
+
 | Function | Command |
 | --- | --- |
 | Show help | `?` / `help` |
@@ -46,13 +51,49 @@ The Arduino will display a help screen, then wait for your commands:
 | Write register | `w <id> <sub> <val>` |
 | Write-only register | `wo <id> <sub> <val>` |
 
+  - Standard OVMS command syntax (i.e. `pre`, `read` etc.) is also accepted
   - `<id>` & `<sub>` define the SDO register to access, need to be given as hexadecimal numbers
   - `<val>` is the value to write, needs to be given as an unsigned decimal number (negative = two's complement, see below)
 
-**Examples**:
+
+### Macro commands
+
+| Function | Command |
+| --- | --- |
+| Set profile from base64 | `set <prf> <b64>` |
+| Reset profile | `reset <prf>` |
+| Get profile base64 | `get <prf>` |
+| Show main profile values | `info` |
+| Save config to profile | `save <prf>` |
+| Load config from profile | `load <prf>` |
+| Set drive level | `drive <prc>` |
+| Set recuperation levels neutral & brake | `recup <ntr> <brk>` |
+| Set ramp levels | `ramps <st> <ac> <dc> <nt> <br>` |
+| Set ramp limits | `rampl <ac> <dc>` |
+| Set smoothing | `smooth <prc>` |
+| Set max & warn speed | `speed <max> <warn>` |
+| Set torque, power & current levels | `power <trq> <pw1> <pw2> <cur>` |
+| Set torque speed maps | `tsmap <DNB> <p1@s1> <p2@s2> <p3@s3> <p4@s4>` |
+| Set brakelight accel levels | `brakelight <on> <off>` |
+
+  - See [OVMS user manual](https://github.com/openvehicles/Open-Vehicle-Monitoring-System/raw/master/docs/Renault-Twizy/OVMS-UserGuide-RenaultTwizy.pdf)
+  - See [OVMS command overview](https://github.com/openvehicles/Open-Vehicle-Monitoring-System/raw/master/docs/Renault-Twizy/Twizy-Command-Overview.pdf)
+  - See [Twizy profile editor](https://dexters-web.de/cfgedit)
+  - See [Twizy profile converter](https://dexters-web.de/cfgconv)
+
+
+### Examples
 
   - Get firmware version: `rs 100a 00` (if it's `0712.0003` or higher, the Twizy is locked)
-  - Set brake recuperation to 30%: `w 2920 04 300`
+  - Set vmax to 100 kph: `speed 100`
+  - Set torque to 130% and power to 120%: `power 130 120`
+  - Set neutral recuperation to 20% and brake recuperation to 30%: `recup 20 30`
+  - Set and apply a base64 profile: `set 0 3m9wg295ABozAAAAAAAAAAAuOkVbZVNFNRUrRVtlNSMbJGUAAAABAABlZQAAAAAA` (Twizy needs to be on, not in `GO`)
+  - Save current profile to EEPROM slot 1: `save 1`
+  - Reset SEVCON to default configuration: `reset`
+
+
+### Notes
 
 The shell automatically logs into the SEVCON with access level 4 (highest user level, 5 is reserved for SEVCON engineering), so all user SDOs can be written to. See SEVCON master dictionary for access levels. **Note**: all logins are logged in the SEVCON event logs. See SEVCON manual on how to access the logs.
 

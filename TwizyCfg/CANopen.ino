@@ -17,6 +17,9 @@
  */
 
 #include "CANopen.h"
+#include "Tuning.h"
+#include "utils.h"
+
 
 // SDO TX/RX buffer:
 sdo_buffer twizy_sdo;
@@ -248,6 +251,15 @@ UINT writesdo(UINT index, UINT8 subindex, UINT32 data)
 {
   UINT8 control;
 
+#if TWIZY_DEBUG >= 1
+  Serial.print(F("W "));
+  Serial.print(index, HEX);
+  Serial.print(F(" "));
+  Serial.print(subindex, HEX);
+  Serial.print(F(" "));
+  Serial.println(data);
+#endif
+
   // request download:
   twizy_sdo.control = SDO_InitDownloadRequest | SDO_Expedited; // no size needed, server is smart
   twizy_sdo.index = index;
@@ -281,6 +293,21 @@ UINT login(bool on)
 {
   UINT err;
 
+  // get SEVCON type (Twizy 80/45):
+  if (err = readsdo(0x1018,0x02))
+    return ERR_UnknownHardware + err;
+
+  if (twizy_sdo.data == 0x0712302d)
+    twizy_cfg.type = 0; // Twizy80
+  else if (twizy_sdo.data == 0x0712301b)
+    twizy_cfg.type = 1; // Twizy45
+  else {
+    Serial.print(F("ERROR: Unknown controller type: 0x"));
+    Serial.println(twizy_sdo.data, HEX);
+    Serial.println(F("(Twizy80 = 0x0712302d, Twizy45 = 0x0712301b)"));
+    return ERR_UnknownHardware; // unknown controller type
+  }
+  
   // check login level:
   if (err = readsdo(0x5000,1))
     return ERR_LoginFailed + err;
@@ -296,6 +323,9 @@ UINT login(bool on)
       return ERR_LoginFailed + err;
     if (twizy_sdo.data != 4)
       return ERR_LoginFailed;
+
+    Serial.print(F("Logged into SEVCON, car type: Twizy"));
+    Serial.println((twizy_cfg.type==0) ? 80 : 45);
   }
 
   else if (!on && twizy_sdo.data != 0) {
@@ -364,7 +394,7 @@ UINT configmode(bool on)
       }
     }
   }
-  
+
   return 0;
 }
 
