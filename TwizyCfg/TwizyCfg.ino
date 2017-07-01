@@ -16,7 +16,7 @@
  *  https://www.gnu.org/licenses/lgpl.html
  *  
  */
-#define TWIZY_CFG_VERSION "V2.0 (2017-06-25)"
+#define TWIZY_CFG_VERSION "V2.0.1 (2017-07-01)"
 
 #include <EEPROM.h>
 
@@ -201,7 +201,7 @@ bool exec(char *cmdline)
     }
   }
   
-  if (cmd.mode >= modePreOp) {
+  if (!err && cmd.mode >= modePreOp) {
     // enter config mode:
     if (err = configmode(1)) {
       s = vehicle_twizy_fmt_err(s, err);
@@ -352,7 +352,7 @@ bool exec(char *cmdline)
       if (arguments = net_sms_nextarg(arguments))
         i = base64decode(arguments, (byte*)t);
       
-      if (t[0] != vehicle_twizy_cfg_calc_checksum((BYTE *)t)) {
+      if ((BYTE) t[0] != vehicle_twizy_cfg_calc_checksum((BYTE *)t)) {
         s = stp_rom(s, "ERROR: wrong checksum");
       }
       else if (arg[0] >= 1 && arg[0] <= 3) {
