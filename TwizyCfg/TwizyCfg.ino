@@ -10,18 +10,21 @@
  * 
  * Libraries used:
  *  - MCP_CAN: https://github.com/coryjfowler/MCP_CAN_lib
+ *  - iso-tp: https://github.com/dexterbg/iso-tp [https://github.com/altelch/iso-tp]
  * 
  * License:
  *  This is free software under GNU Lesser General Public License (LGPL)
  *  https://www.gnu.org/licenses/lgpl.html
  *  
  */
-#define TWIZY_CFG_VERSION "V2.0.1 (2017-07-01)"
+#define TWIZY_CFG_VERSION "V2.1.0 (2017-07-08)"
 
 #include <EEPROM.h>
 
 #include <mcp_can.h>
 #include <mcp_can_dfs.h>
+
+#include <iso-tp.h>
 
 #include "utils.h"
 #include "CANopen.h"
@@ -31,6 +34,10 @@
 
 // CAN interface:
 MCP_CAN CAN(TWIZY_CAN_CS_PIN);
+
+// ISO-TP:
+IsoTp isotp(&CAN, TWIZY_CAN_IRQ_PIN);
+struct Message_t tpMsg;
 
 // Output buffers:
 char net_scratchpad[200];
@@ -48,7 +55,8 @@ enum cfg_command_id {
   cmdPreOp, cmdOp,
   cmdSet, cmdReset, cmdGet, cmdInfo, cmdSave, cmdLoad,
   cmdDrive, cmdRecup, cmdRamps, cmdRampLimits, cmdSmooth,
-  cmdSpeed, cmdPower, cmdTSMap, cmdBrakelight
+  cmdSpeed, cmdPower, cmdTSMap, cmdBrakelight,
+  cmdDiagAddress, cmdDiagRequest
 };
 
 enum cfg_command_mode {
@@ -96,6 +104,9 @@ const cfg_command command_table[] PROGMEM = {
   { "POWER", cmdPower, modePreOp },
   { "TSMAP", cmdTSMap, modePreOp },
   { "BRAKELIGHT", cmdBrakelight, modePreOp },
+  
+  { "DA", cmdDiagAddress, modeOffline },
+  { "DR", cmdDiagRequest, modeOffline },
   
 };
 
@@ -172,6 +183,9 @@ bool exec(char *cmdline)
       " power <trq> <pw1> <pw2> <cur> -- set torque, power & current levels\n"
       " tsmap <DNB> <pt1..4>     -- set torque speed maps\n"
       " brakelight <on> <off>    -- set brakelight accel levels\n"
+      "\n"
+      " da <sendid> <recvid>     -- set OBD2 device address\n"
+      " dr <hexstring>           -- send OBD2 request\n"
       "\n"
       "See OVMS manual & command overview for details.\n"
       "Note: <id> and <sub> are hexadecimal, <val> are decimal\n"
@@ -323,6 +337,82 @@ bool exec(char *cmdline)
               s = vehicle_twizy_fmt_err(s, err);
             else
               s = stp_ul(s, " => NEW: ", data);
+          }
+        }
+      }
+
+      go_op_onexit = false;
+      break;
+
+
+    case cmdDiagAddress:
+      // DA tx_id_hex rx_id_hex
+      if (arguments = net_sms_nextarg(arguments))
+        arg[0] = (int)axtoul(arguments);
+      if (arguments = net_sms_nextarg(arguments))
+        arg[1] = (int)axtoul(arguments);
+
+      if (!arguments) {
+        s = stp_rom(s, "ERROR: Too few args");
+      }
+      else {
+        tpMsg.tx_id = arg[0];
+        tpMsg.rx_id = arg[1];
+        CAN.init_Filt(1, 0, tpMsg.rx_id << 16);
+        s = stp_rom(s, "OK");
+      }
+      go_op_onexit = false;
+      break;
+
+
+    case cmdDiagRequest:
+      // DR hexstring
+      if (arguments = net_sms_nextarg(arguments)) {
+        if (strlen(arguments) & 1) {
+          // input length is odd:
+          s = stp_rom(s, "ERROR: invalid hex string length");
+        }
+        else {
+          // parse hexstring into scratchpad:
+          t = (char *) net_msg_scratchpad;
+          maps[2] = 0;
+          while (arguments[0]) {
+            maps[0] = arguments[0];
+            maps[1] = arguments[1];
+            *t++ = axtoul(maps);
+            arguments += 2;
+          }
+        }
+      }
+
+      if (!arguments) {
+        s = stp_rom(s, "ERROR: Too few args");
+      }
+      else {
+        // send request:
+        tpMsg.Buffer = (uint8_t *)net_msg_scratchpad;
+        tpMsg.len = (t - (char *)net_msg_scratchpad);
+        if (err = isotp.send(&tpMsg)) {
+          s = stp_i(s, "ERROR: isotp.send error code ", err);
+        }
+        else {
+          // read response into scratchpad:
+          tpMsg.Buffer = (uint8_t *)net_msg_scratchpad;
+          tpMsg.len = 0;
+          isotp.receive(&tpMsg);
+          if (tpMsg.tp_state != ISOTP_FINISHED) {
+            s = stp_i(s, "ERROR: isotp.receive error code ", tpMsg.tp_state);
+          }
+          else {
+            // output response as hexstring:
+            Serial.print(net_scratchpad);
+            net_scratchpad[0] = 0;
+            for (i=0; i<tpMsg.len; i++) {
+              if ((byte)net_msg_scratchpad[i] < 0x10)
+                Serial.print(F("0"));
+              Serial.print((byte)net_msg_scratchpad[i], HEX);
+            }
+            break;
           }
         }
       }
@@ -785,7 +875,7 @@ boolean stringComplete = false;  // whether the string is complete
 
 void setup() {
   
-  Serial.begin(115200);
+  Serial.begin(1000000);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }

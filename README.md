@@ -8,6 +8,8 @@ It's a port of my SEVCON core functionality from the [OVMS project](https://gith
 
 **V2** now also supports the OVMS/Twizy tuning macro commands (i.e. `power`, `speed`, `recup` etc.) as well as profile management including saving to / loading from the Arduino EEPROM. Assuming this will be used by hardware hackers, the `brakelight` command has been included as well. Still missing from the OVMS command set is the `clear` command, this is planned to get included along with log access and output. Also missing are all dynamic adjustment functions, i.e. auto drive/recuperation power level following and kickdown.
 
+**V2.1** adds support for low level OBD2 diag requests. Look out for DDT2000 XML files for device IDs, requests and data definitions. There is currently no parsing of the results, output is just the hex encoded data.
+
 Read the OVMS user manual and command overview for details on all commands. You may also like to read the SEVCON Gen4 manual for some basic description of registers. The full register set is documented in the SEVCON master dictionary, which is ©SEVCON. It's contained in the SEVCON DVT package.
 
 Most registers of interest for normal tuning can be found in the [Twizy SDO list](extras/Twizy-SDO-List.ods).
@@ -26,8 +28,9 @@ Most registers of interest for normal tuning can be found in the [Twizy SDO list
 
 To download, click the DOWNLOADS button in the top right corner, download the ZIP file. Extract the ZIP, open `TwizyCfg/TwizyCfg.ino` from Arduino IDE.
 
-You will also need this library:
+You will also need these libraries:
   - [MCP_CAN_lib by Cory Fowler](https://github.com/coryjfowler/MCP_CAN_lib)
+  - [iso-tp by Heiko Krupp](https://github.com/dexterbg/iso-tp)
 
 Enter your CAN module configuration in the `TwizyCfg_config.h` tab.
 
@@ -39,7 +42,7 @@ Connect to the OBD2 port, switch on the Twizy, start the sketch & open the seria
 The Arduino will display a help screen, then wait for your commands:
 
 
-### Low level commands
+### Low level CANopen commands
 
 | Function | Command |
 | --- | --- |
@@ -82,6 +85,19 @@ The Arduino will display a help screen, then wait for your commands:
   - See [Twizy profile converter](https://dexters-web.de/cfgconv)
 
 
+### Low level OBD-2 commands
+
+| Function | Command |
+| --- | --- |
+| Set OBD2 device address | `da <sendid> <receiveid>` |
+| Send OBD2 request | `dr <hexstring>` |
+
+  - See [OBD-II PIDs](https://en.wikipedia.org/wiki/OBD-II_PIDs)
+  - See [Unified Diagnostic Services](https://en.wikipedia.org/wiki/Unified_Diagnostic_Services)
+  - Look out for DDT2000 (©Renault) XML files for Renault specific device IDs, requests and data structures
+  - Check [canbushack.com](http://canbushack.com/) for digging deeper
+
+
 ### Examples
 
   - Get firmware version: `rs 100a 00` (if it's `0712.0003` or higher, the Twizy is locked)
@@ -91,6 +107,8 @@ The Arduino will display a help screen, then wait for your commands:
   - Set and apply a base64 profile: `set 0 3m9wg295ABozAAAAAAAAAAAuOkVbZVNFNRUrRVtlNSMbJGUAAAABAABlZQAAAAAA` (Twizy needs to be on, not in `GO`)
   - Save current profile to EEPROM slot 1: `save 1`
   - Reset SEVCON to default configuration: `reset`
+  - Read DTC from instrument cluster: `da 743 763`, then `dr 2113`
+  - Read battery health estimation from BMS: `da 79b 7bb`, then `dr 2161`
 
 
 ### Notes
