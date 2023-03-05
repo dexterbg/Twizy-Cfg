@@ -30,7 +30,7 @@ To download, click the DOWNLOADS button in the top right corner, download the ZI
 
 You will also need these libraries:
   - [MCP_CAN_lib by Cory Fowler](https://github.com/coryjfowler/MCP_CAN_lib)
-  - [iso-tp by Heiko Krupp](https://github.com/dexterbg/iso-tp)
+  - [iso-tp by Heiko Krupp](https://github.com/altelch/iso-tp)
 
 Enter your CAN module configuration in the `TwizyCfg_config.h` tab.
 

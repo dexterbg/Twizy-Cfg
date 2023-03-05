@@ -10,14 +10,14 @@
  * 
  * Libraries used:
  *  - MCP_CAN: https://github.com/coryjfowler/MCP_CAN_lib
- *  - iso-tp: https://github.com/dexterbg/iso-tp [https://github.com/altelch/iso-tp]
+ *  - iso-tp: https://github.com/altelch/iso-tp
  * 
  * License:
  *  This is free software under GNU Lesser General Public License (LGPL)
  *  https://www.gnu.org/licenses/lgpl.html
  *  
  */
-#define TWIZY_CFG_VERSION "V2.1.0 (2017-07-08)"
+#define TWIZY_CFG_VERSION "V2.1.1 (2023-03-05)"
 
 #include <EEPROM.h>
 
