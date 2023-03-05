@@ -943,8 +943,8 @@ void serialEvent() {
   
   while (Serial.available()) {
     char inChar = (char)Serial.read();
-    if (inChar == '\n') {
-      stringComplete = true;
+    if (inChar == '\r' || inChar == '\n') {
+      stringComplete = (inputString.length() > 0);
     }
     else if (inChar >= 32) {
       inputString += inChar;
@@ -952,5 +952,3 @@ void serialEvent() {
   }
   
 }
-
-
