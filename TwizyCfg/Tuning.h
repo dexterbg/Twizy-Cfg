@@ -21,11 +21,11 @@
 
 #define OVMS_TWIZY_CFG_BRAKELIGHT 1
 
-union cfg_status {
+union __attribute__ ((__packed__)) cfg_status {
   
   UINT8 drivemode;
   
-  struct {
+  struct __attribute__ ((__packed__)) {
     unsigned type:1;                  // CFG: 0=Twizy80, 1=Twizy45
     unsigned profile_user:2;          // CFG: user selected profile: 0=Default, 1..3=Custom
     unsigned profile_cfgmode:2;       // CFG: profile, cfgmode params were last loaded from
@@ -43,12 +43,12 @@ extern cfg_status twizy_cfg;
 // 1 kept in RAM (working set)
 // 3 stored in binary EEPROM param slots PARAM_PROFILE1 /2 /3
 
-struct cfg_profile {
+struct __attribute__ ((__packed__)) cfg_profile {
   UINT8       checksum;
   UINT8       speed, warn;
   UINT8       torque, power_low, power_high;
   UINT8       drive, neutral, brake;
-  struct tsmap {
+  struct __attribute__ ((__packed__)) tsmap {
     UINT8       spd1, spd2, spd3, spd4;
     UINT8       prc1, prc2, prc3, prc4;
   }           tsmap[3]; // 0=D 1=N 2=B

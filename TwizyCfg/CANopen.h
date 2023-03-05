@@ -28,13 +28,13 @@
 //    3 = subindex
 //    4..7 = data (little endian)
 
-union sdo_buffer {
+union __attribute__ ((__packed__)) sdo_buffer {
 
   // raw / segment data:
   UINT8   byte[8];
 
   // request / expedited:
-  struct {
+  struct __attribute__ ((__packed__)) {
     UINT8   control;
     UINT    index;
     UINT8   subindex;

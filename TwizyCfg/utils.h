@@ -22,8 +22,8 @@
 // Type shortcuts:
 
 typedef unsigned char UINT8;
-typedef unsigned int UINT;
-typedef unsigned int WORD;
+typedef unsigned short UINT;
+typedef unsigned short WORD;
 typedef unsigned long UINT32;
 
 typedef signed char INT8;
